@@ -1,8 +1,38 @@
 export type EmotionCategory = 'basic' | 'positive' | 'negative' | 'social';
 
+export type TransitionType =
+  | 'ACUTE'   // 単一事象トリガーによる急性遷移
+  | 'APPR'    // 再評価・認知シフトによる遷移
+  | 'INTENS'  // 同一状態の強度増大
+  | 'CHRONIC' // 慢性化・状態の固着
+  | 'RESOLV'  // 解消・消退
+  | 'BLEND';  // 二感情の混合
+
+export interface AppraisalProfile {
+  nov: number;   // 新奇性・不確実性 -2(既知) ～ 2(未知)
+  pleas: number; // 快・不快 -2(不快) ～ 2(快)
+  goal: number;  // 目標整合性 -2(阻害) ～ 2(促進)
+  cope: number;  // 対処可能性 -2(無力) ～ 2(十分)
+  norm: number;  // 規範整合性 -2(逸脱) ～ 2(適合)
+}
+
+export interface TemporalProfile {
+  onset: number;   // 発現までの秒数
+  peak: number;    // ピークまでの分数
+  decay: number;   // 半減期（分）
+  persist: number; // 持続時間（時間）
+}
+
+export interface RegulationProfile {
+  adaptive: string[];        // 適応的な調整方略
+  reappraisal: string[];     // 再評価の方向性
+  contraindicated: string[]; // 逆効果な方略
+}
+
 export interface EmotionTransition {
   to: string;
   label: string;
+  type: TransitionType;
 }
 
 export interface Emotion {
@@ -16,8 +46,12 @@ export interface Emotion {
   bodyReactions: string[];
   function: string;
   transitions: EmotionTransition[];
-  valence: number;   // -2 to 2
-  arousal: number;   // -2 to 2
+  valence: number;    // -2 to 2
+  arousal: number;    // -2 to 2
+  dominance: number;  // -2(無力) ～ 2(支配) PAD第3軸
+  appraisal: AppraisalProfile;
+  temporal: TemporalProfile;
+  regulation: RegulationProfile;
   references: string[];
 }
 
@@ -51,14 +85,20 @@ export const emotions: Emotion[] = [
     ],
     function: '報酬経路の強化を通じて適応行動を学習させる。思考と行動のレパートリーを拡張し（broaden-and-build）、長期的な心理・社会・身体資源を形成する。',
     transitions: [
-      { to: 'pride', label: '自己帰属' },
-      { to: 'gratitude', label: '他者への帰属' },
-      { to: 'flow', label: '活動没入' },
-      { to: 'contentment', label: '強度の減衰' },
-      { to: 'anxiety', label: '次への不安' },
+      { to: 'pride', label: '自己帰属', type: 'APPR' },
+      { to: 'gratitude', label: '他者への帰属', type: 'APPR' },
+      { to: 'flow', label: '活動没入', type: 'INTENS' },
+      { to: 'contentment', label: '強度の減衰', type: 'RESOLV' },
+      { to: 'anxiety', label: '次への不安', type: 'APPR' },
     ],
-    valence: 2,
-    arousal: 1,
+    valence: 2, arousal: 1, dominance: 1,
+    appraisal: { nov: 1, pleas: 2, goal: 2, cope: 2, norm: 1 },
+    temporal: { onset: 2, peak: 5, decay: 60, persist: 4 },
+    regulation: {
+      adaptive: ['感謝の表現', '喜びの共有', '味わい（savoring）'],
+      reappraisal: ['偶然の幸運への気づき', '人とのつながりの価値の認識'],
+      contraindicated: ['他者との比較による格下げ', '喜びの感情抑圧'],
+    },
     references: ['Fredrickson (2001)', 'Kringelbach & Berridge (2009)'],
   },
   {
@@ -89,14 +129,20 @@ export const emotions: Emotion[] = [
     ],
     function: '①援助呼びかけの社会的シグナル ②活動停止と内省による目標の再調整 ③取り戻せない損失へのエネルギー投資を止める。',
     transitions: [
-      { to: 'grief', label: '長期化・深化' },
-      { to: 'anger', label: '不当性の認知' },
-      { to: 'nostalgia', label: '温かい記憶の混入' },
-      { to: 'anxiety', label: '将来への不安を伴う' },
-      { to: 'contentment', label: '受容・統合' },
+      { to: 'grief', label: '長期化・深化', type: 'CHRONIC' },
+      { to: 'anger', label: '不当性の認知', type: 'APPR' },
+      { to: 'nostalgia', label: '温かい記憶の混入', type: 'BLEND' },
+      { to: 'anxiety', label: '将来への不安を伴う', type: 'BLEND' },
+      { to: 'contentment', label: '受容・統合', type: 'RESOLV' },
     ],
-    valence: -2,
-    arousal: -1,
+    valence: -2, arousal: -1, dominance: -1,
+    appraisal: { nov: 0, pleas: -2, goal: -2, cope: -1, norm: 1 },
+    temporal: { onset: 30, peak: 10, decay: 90, persist: 24 },
+    regulation: {
+      adaptive: ['表現・言語化', 'セルフ・コンパッション', '意味の探索'],
+      reappraisal: ['喪失を成長の契機として再評価', '残っているものへの注意の転換'],
+      contraindicated: ['反芻', '感情の抑圧', '孤立'],
+    },
     references: ['Bonanno (2009)', 'Stroebe & Schut (1999)'],
   },
   {
@@ -127,14 +173,20 @@ export const emotions: Emotion[] = [
     ],
     function: '不当な侵害に対して相手の行動を変えさせる社会的交渉ツール。社会階層の維持と道徳的規範の強制。',
     transitions: [
-      { to: 'frustration', label: '出口なし' },
-      { to: 'guilt', label: '自分の怒りへの後悔' },
-      { to: 'contempt', label: '相手を格下と評価' },
-      { to: 'sadness', label: '攻撃後の空虚' },
-      { to: 'contentment', label: '鎮静・解決' },
+      { to: 'frustration', label: '出口なし', type: 'INTENS' },
+      { to: 'guilt', label: '自分の怒りへの後悔', type: 'APPR' },
+      { to: 'contempt', label: '相手を格下と評価', type: 'APPR' },
+      { to: 'sadness', label: '攻撃後の空虚', type: 'RESOLV' },
+      { to: 'contentment', label: '鎮静・解決', type: 'RESOLV' },
     ],
-    valence: -1,
-    arousal: 2,
+    valence: -1, arousal: 2, dominance: 2,
+    appraisal: { nov: 1, pleas: -1, goal: -2, cope: 1, norm: -2 },
+    temporal: { onset: 1, peak: 2, decay: 15, persist: 2 },
+    regulation: {
+      adaptive: ['感情の言語化', '一時的な場の離脱', '身体的発散（運動）'],
+      reappraisal: ['他者の意図の再評価（悪意でなく状況的要因）', '怒りのシグナルとしての理解'],
+      contraindicated: ['感情の爆発的表出', '反芻的反復', 'アルコールによる抑制'],
+    },
     references: ['Gross (1998)', 'Bushman (2002)'],
   },
   {
@@ -165,13 +217,19 @@ export const emotions: Emotion[] = [
     ],
     function: '脅威の即時検知と行動準備。生存に最も重要な適応感情のひとつ。',
     transitions: [
-      { to: 'anxiety', label: '対象が曖昧・未来志向に' },
-      { to: 'anger', label: '脅威への反撃' },
-      { to: 'relief', label: '脅威の消失' },
-      { to: 'curiosity', label: '安全確認後の探索' },
+      { to: 'anxiety', label: '対象が曖昧・未来志向に', type: 'CHRONIC' },
+      { to: 'anger', label: '脅威への反撃', type: 'APPR' },
+      { to: 'relief', label: '脅威の消失', type: 'ACUTE' },
+      { to: 'curiosity', label: '安全確認後の探索', type: 'RESOLV' },
     ],
-    valence: -2,
-    arousal: 2,
+    valence: -2, arousal: 2, dominance: -2,
+    appraisal: { nov: 2, pleas: -2, goal: -2, cope: -2, norm: 0 },
+    temporal: { onset: 0.2, peak: 0.5, decay: 20, persist: 1 },
+    regulation: {
+      adaptive: ['系統的脱感作', 'マインドフルな観察', '安全基地の確認'],
+      reappraisal: ['脅威の現実的評価（確率・影響度の検討）', '対処資源の棚卸し'],
+      contraindicated: ['恐怖対象の完全回避', '感情の無理な抑圧'],
+    },
     references: ['LeDoux (1996)', 'Öhman & Mineka (2001)'],
   },
   {
@@ -202,13 +260,19 @@ export const emotions: Emotion[] = [
     ],
     function: '注意リソースを瞬時に外的事象に再配分する。新規情報への探索行動を準備する。',
     transitions: [
-      { to: 'joy', label: '肯定的評価' },
-      { to: 'fear', label: '否定的評価（脅威）' },
-      { to: 'curiosity', label: '興味への転化' },
-      { to: 'disgust', label: '不快な対象の認識' },
+      { to: 'joy', label: '肯定的評価', type: 'ACUTE' },
+      { to: 'fear', label: '否定的評価（脅威）', type: 'ACUTE' },
+      { to: 'curiosity', label: '興味への転化', type: 'ACUTE' },
+      { to: 'disgust', label: '不快な対象の認識', type: 'ACUTE' },
     ],
-    valence: 0,
-    arousal: 2,
+    valence: 0, arousal: 2, dominance: 0,
+    appraisal: { nov: 2, pleas: 0, goal: 0, cope: 0, norm: 0 },
+    temporal: { onset: 0.2, peak: 0.2, decay: 1, persist: 0.1 },
+    regulation: {
+      adaptive: ['一時停止と評価（立ち止まること）', '好奇心への転換'],
+      reappraisal: ['驚きを情報として受け取る', '不確実性の受容'],
+      contraindicated: ['即時的な過剰反応', '驚きの自動的な否定的解釈'],
+    },
     references: ['Ekman (1972)'],
   },
   {
@@ -238,12 +302,18 @@ export const emotions: Emotion[] = [
     ],
     function: '病原体・腐敗物・感染リスクへの接触を避ける生物学的防御。道徳的嫌悪は社会規範の強化にも機能。',
     transitions: [
-      { to: 'anger', label: '道徳的違反への怒りと混合' },
-      { to: 'contempt', label: '相手への持続的拒絶' },
-      { to: 'fear', label: '危険な汚染物への恐怖' },
+      { to: 'anger', label: '道徳的違反への怒りと混合', type: 'BLEND' },
+      { to: 'contempt', label: '相手への持続的拒絶', type: 'CHRONIC' },
+      { to: 'fear', label: '危険な汚染物への恐怖', type: 'BLEND' },
     ],
-    valence: -2,
-    arousal: 0,
+    valence: -2, arousal: 0, dominance: 1,
+    appraisal: { nov: 0, pleas: -2, goal: -2, cope: 1, norm: -2 },
+    temporal: { onset: 1, peak: 2, decay: 15, persist: 2 },
+    regulation: {
+      adaptive: ['対象からの物理的・心理的距離の確保', '道徳的嫌悪の批判的検討'],
+      reappraisal: ['嫌悪の文化的相対性の認識', '過剰な道徳的嫌悪の再評価'],
+      contraindicated: ['嫌悪対象への強制的な接触', '嫌悪感の極端な抑制'],
+    },
     references: ['Rozin et al. (2008)'],
   },
 
@@ -275,14 +345,20 @@ export const emotions: Emotion[] = [
     ],
     function: '親密な人間関係・養育・長期的協力の基盤。愛着の安全基地が探索行動と回復力を支える。',
     transitions: [
-      { to: 'joy', label: '相手との再会・共有' },
-      { to: 'anxiety', label: '相手への心配' },
-      { to: 'jealousy', label: '関係の脅威' },
-      { to: 'grief', label: '別離・死別' },
-      { to: 'gratitude', label: '受け取った配慮への気づき' },
+      { to: 'joy', label: '相手との再会・共有', type: 'ACUTE' },
+      { to: 'anxiety', label: '相手への心配', type: 'BLEND' },
+      { to: 'jealousy', label: '関係の脅威', type: 'ACUTE' },
+      { to: 'grief', label: '別離・死別', type: 'ACUTE' },
+      { to: 'gratitude', label: '受け取った配慮への気づき', type: 'APPR' },
     ],
-    valence: 2,
-    arousal: 0,
+    valence: 2, arousal: 0, dominance: 0,
+    appraisal: { nov: 0, pleas: 2, goal: 2, cope: 2, norm: 2 },
+    temporal: { onset: 120, peak: 1440, decay: 100000, persist: 87600 },
+    regulation: {
+      adaptive: ['質の高い時間の共有', '感謝と愛着の表現', 'セキュアな愛着の育成'],
+      reappraisal: ['愛着への恐れを安全として再評価', '脆弱性を強さとして認識'],
+      contraindicated: ['完全な感情的依存', '依存の否定と壁の構築'],
+    },
     references: ['Fisher (2004)', 'Bowlby (1969)', 'Gottman (1999)'],
   },
   {
@@ -312,13 +388,19 @@ export const emotions: Emotion[] = [
     ],
     function: '社会的互恵性のサイクルを起動する「社会的接着剤」。新しい関係を見つけ、既存の関係を強化し、絆を結ぶ（find-remind-bind）。',
     transitions: [
-      { to: 'joy', label: '幸福感の増大' },
-      { to: 'love', label: '相手への愛着強化' },
-      { to: 'contentment', label: '穏やかな満足へ' },
-      { to: 'elevation', label: '他者の善行への感動' },
+      { to: 'joy', label: '幸福感の増大', type: 'INTENS' },
+      { to: 'love', label: '相手への愛着強化', type: 'INTENS' },
+      { to: 'contentment', label: '穏やかな満足へ', type: 'RESOLV' },
+      { to: 'elevation', label: '他者の善行への感動', type: 'APPR' },
     ],
-    valence: 2,
-    arousal: 0,
+    valence: 2, arousal: 0, dominance: 0,
+    appraisal: { nov: 1, pleas: 2, goal: 1, cope: 2, norm: 2 },
+    temporal: { onset: 5, peak: 10, decay: 120, persist: 6 },
+    regulation: {
+      adaptive: ['感謝日記', '感謝の手紙・言葉での表現', '恩恵の再想起'],
+      reappraisal: ['「当然」から「贈りもの」への再認識', '互恵的つながりとしての関係の捉え直し'],
+      contraindicated: ['感謝の義務化（負債感への変質）', '過小評価と見過ごし'],
+    },
     references: ['McCullough et al. (2001)', 'Algoe (2012)', 'Emmons & McCullough (2003)'],
   },
   {
@@ -346,13 +428,19 @@ export const emotions: Emotion[] = [
     ],
     function: '社会的地位の交渉と維持。次の挑戦への継続的動機づけ。',
     transitions: [
-      { to: 'joy', label: '達成の喜びと共存' },
-      { to: 'contempt', label: '過剰→傲慢' },
-      { to: 'shame', label: '他者に誇りを否定される' },
-      { to: 'anxiety', label: '次も成功できるかの不安' },
+      { to: 'joy', label: '達成の喜びと共存', type: 'BLEND' },
+      { to: 'contempt', label: '過剰→傲慢', type: 'INTENS' },
+      { to: 'shame', label: '他者に誇りを否定される', type: 'ACUTE' },
+      { to: 'anxiety', label: '次も成功できるかの不安', type: 'APPR' },
     ],
-    valence: 2,
-    arousal: 1,
+    valence: 2, arousal: 1, dominance: 2,
+    appraisal: { nov: 1, pleas: 2, goal: 2, cope: 2, norm: 1 },
+    temporal: { onset: 10, peak: 30, decay: 120, persist: 24 },
+    regulation: {
+      adaptive: ['達成の言語化と共有', '適切な自己評価の維持', '他者への感謝との統合'],
+      reappraisal: ['傲慢な誇りから真正な誇りへの転換', '成功の文脈的要因の認識'],
+      contraindicated: ['自己誇大化', '達成の過小評価による誇りの抑圧'],
+    },
     references: ['Tracy & Robins (2007)', 'Tracy & Matsumoto (2008)'],
   },
   {
@@ -380,13 +468,19 @@ export const emotions: Emotion[] = [
     ],
     function: '不確実な状況下での目標追求行動の維持。否認と異なり、現実を見据えながら可能性を信じる。',
     transitions: [
-      { to: 'joy', label: '目標達成' },
-      { to: 'anxiety', label: '不確実性の増大' },
-      { to: 'sadness', label: '希望の消失' },
-      { to: 'curiosity', label: '可能性の探索' },
+      { to: 'joy', label: '目標達成', type: 'ACUTE' },
+      { to: 'anxiety', label: '不確実性の増大', type: 'APPR' },
+      { to: 'sadness', label: '希望の消失', type: 'ACUTE' },
+      { to: 'curiosity', label: '可能性の探索', type: 'APPR' },
     ],
-    valence: 1,
-    arousal: 1,
+    valence: 1, arousal: 1, dominance: 0,
+    appraisal: { nov: 1, pleas: 1, goal: 1, cope: 0, norm: 1 },
+    temporal: { onset: 60, peak: 60, decay: 240, persist: 48 },
+    regulation: {
+      adaptive: ['具体的な行動計画の策定', 'サポートネットワークの活用', '小さな成功の積み上げ'],
+      reappraisal: ['悲観的な予測の現実的修正', '「まだ可能性がある」という視点'],
+      contraindicated: ['根拠のない楽観主義（否認）', '絶望的な思考の反芻'],
+    },
     references: ['Snyder (1991)'],
   },
   {
@@ -416,12 +510,18 @@ export const emotions: Emotion[] = [
     ],
     function: 'ストレス耐性の回復と免疫機能の正常化。慢性的不安からの解放は喜びより深い身体的解放感を伴う。',
     transitions: [
-      { to: 'joy', label: '回避の喜びへ' },
-      { to: 'contentment', label: '静かな満足へ' },
-      { to: 'gratitude', label: '助けてくれた人への感謝' },
+      { to: 'joy', label: '回避の喜びへ', type: 'APPR' },
+      { to: 'contentment', label: '静かな満足へ', type: 'RESOLV' },
+      { to: 'gratitude', label: '助けてくれた人への感謝', type: 'APPR' },
     ],
-    valence: 2,
-    arousal: -1,
+    valence: 2, arousal: -1, dominance: 1,
+    appraisal: { nov: 0, pleas: 2, goal: 2, cope: 2, norm: 1 },
+    temporal: { onset: 2, peak: 3, decay: 30, persist: 3 },
+    regulation: {
+      adaptive: ['身体の弛緩を意識的に受け取る', '感謝とともに受容する'],
+      reappraisal: ['脅威が去ったことの確認', '安全の現実的評価'],
+      contraindicated: ['安心後の再不安への即時移行', '安堵の無視と緊張の継続'],
+    },
     references: [],
   },
   {
@@ -450,13 +550,19 @@ export const emotions: Emotion[] = [
     ],
     function: '学習と探索の主要な動機。「拡張的好奇心」（新経験の追求）と「包摂的好奇心」（不確実性への耐性）の2種。',
     transitions: [
-      { to: 'joy', label: '発見の喜び' },
-      { to: 'awe', label: '巨大な謎への直面' },
-      { to: 'frustration', label: '理解が進まない' },
-      { to: 'flow', label: 'スキルと難度が釣り合う' },
+      { to: 'joy', label: '発見の喜び', type: 'ACUTE' },
+      { to: 'awe', label: '巨大な謎への直面', type: 'INTENS' },
+      { to: 'frustration', label: '理解が進まない', type: 'APPR' },
+      { to: 'flow', label: 'スキルと難度が釣り合う', type: 'INTENS' },
     ],
-    valence: 1,
-    arousal: 1,
+    valence: 1, arousal: 1, dominance: 1,
+    appraisal: { nov: 2, pleas: 1, goal: 1, cope: 1, norm: 1 },
+    temporal: { onset: 3, peak: 5, decay: 30, persist: 2 },
+    regulation: {
+      adaptive: ['探索行動の継続', '問いの言語化', '不確実性の受容'],
+      reappraisal: ['「分からない」を恐れではなく好機として捉える', '知的謙虚さの培養'],
+      contraindicated: ['過度な情報収集（情報中毒）', '答えのない問いの回避'],
+    },
     references: ['Gruber et al. (2014)', 'Kashdan (2009)'],
   },
   {
@@ -485,13 +591,19 @@ export const emotions: Emotion[] = [
     ],
     function: '①謙虚さの増加 ②向社会的行動の促進 ③物質主義の減少 ④自然との一体感。瞑想・サイケデリック体験と部分的に共通の神経基盤。',
     transitions: [
-      { to: 'joy', label: '美しさへの共鳴' },
-      { to: 'curiosity', label: '謎への探索意欲' },
-      { to: 'gratitude', label: '存在への感謝' },
-      { to: 'contentment', label: '静謐な満足へ' },
+      { to: 'joy', label: '美しさへの共鳴', type: 'BLEND' },
+      { to: 'curiosity', label: '謎への探索意欲', type: 'APPR' },
+      { to: 'gratitude', label: '存在への感謝', type: 'APPR' },
+      { to: 'contentment', label: '静謐な満足へ', type: 'RESOLV' },
     ],
-    valence: 2,
-    arousal: 0,
+    valence: 2, arousal: 0, dominance: -2,
+    appraisal: { nov: 2, pleas: 2, goal: 0, cope: -1, norm: 1 },
+    temporal: { onset: 5, peak: 10, decay: 60, persist: 8 },
+    regulation: {
+      adaptive: ['自然・芸術・人間の偉大さへの意図的な露出', '畏敬の体験の記録と想起'],
+      reappraisal: ['自己の小ささを脅威でなく解放として捉える', '謙虚さを強みとして認識'],
+      contraindicated: ['すべてを説明・制御しようとする強迫的な傾向'],
+    },
     references: ['Keltner & Haidt (2003)'],
   },
   {
@@ -519,12 +631,18 @@ export const emotions: Emotion[] = [
     ],
     function: '熟達と意味の源泉。「最適経験」として人生の質を高める。内発的動機づけの頂点。',
     transitions: [
-      { to: 'joy', label: '活動後の達成感' },
-      { to: 'contentment', label: '深い満足へ' },
-      { to: 'pride', label: '自己の成長の認識' },
+      { to: 'joy', label: '活動後の達成感', type: 'RESOLV' },
+      { to: 'contentment', label: '深い満足へ', type: 'RESOLV' },
+      { to: 'pride', label: '自己の成長の認識', type: 'APPR' },
     ],
-    valence: 2,
-    arousal: 1,
+    valence: 2, arousal: 1, dominance: 2,
+    appraisal: { nov: 1, pleas: 2, goal: 2, cope: 2, norm: 1 },
+    temporal: { onset: 300, peak: 60, decay: 30, persist: 2 },
+    regulation: {
+      adaptive: ['挑戦-スキルバランスの調整', '外的妨害の排除', '明確な目標の設定'],
+      reappraisal: ['活動そのものへの内発的価値の発見', '結果ではなく過程への集中'],
+      contraindicated: ['過度な外的評価・報酬の強調', '活動中の自己観察・批判'],
+    },
     references: ['Csikszentmihalyi (1990)'],
   },
   {
@@ -552,12 +670,18 @@ export const emotions: Emotion[] = [
     ],
     function: '道徳的模倣行動の促進。向社会的行動の連鎖を起こす。共同体の道徳的水準の向上。',
     transitions: [
-      { to: 'gratitude', label: '恩恵への感謝' },
-      { to: 'awe', label: '人間の崇高さへの畏敬' },
-      { to: 'joy', label: '感動の喜びへ' },
+      { to: 'gratitude', label: '恩恵への感謝', type: 'APPR' },
+      { to: 'awe', label: '人間の崇高さへの畏敬', type: 'INTENS' },
+      { to: 'joy', label: '感動の喜びへ', type: 'BLEND' },
     ],
-    valence: 2,
-    arousal: 0,
+    valence: 2, arousal: 0, dominance: 0,
+    appraisal: { nov: 1, pleas: 2, goal: 1, cope: 2, norm: 2 },
+    temporal: { onset: 5, peak: 5, decay: 30, persist: 6 },
+    regulation: {
+      adaptive: ['高揚体験の共有と語り', '道徳的行動への実践移行'],
+      reappraisal: ['感動を動機として活用する', '他者の善性への信頼の強化'],
+      contraindicated: ['偽善・演技的な感情表出', '感動の商業的・操作的利用'],
+    },
     references: ['Haidt (2003)'],
   },
   {
@@ -585,11 +709,17 @@ export const emotions: Emotion[] = [
     ],
     function: '持続的幸福の基盤。東洋的な「侘び寂び」「足るを知る」の感性と親和性が高い。興奮を伴う喜びとは対照的。',
     transitions: [
-      { to: 'joy', label: '刺激による活性化' },
-      { to: 'boredom', label: '刺激の不足' },
+      { to: 'joy', label: '刺激による活性化', type: 'ACUTE' },
+      { to: 'boredom', label: '刺激の不足', type: 'APPR' },
     ],
-    valence: 2,
-    arousal: -2,
+    valence: 2, arousal: -2, dominance: 1,
+    appraisal: { nov: -1, pleas: 2, goal: 2, cope: 2, norm: 2 },
+    temporal: { onset: 120, peak: 120, decay: 120, persist: 12 },
+    regulation: {
+      adaptive: ['マインドフルネス', '現在への注意の向け直し', '単純な喜びの味わい'],
+      reappraisal: ['「十分である」という認知の強化', '比較による欠乏感からの離脱'],
+      contraindicated: ['絶え間ない刺激追求', '現在への退屈や不満の増幅'],
+    },
     references: [],
   },
 
@@ -621,14 +751,20 @@ export const emotions: Emotion[] = [
     ],
     function: '危険への準備と計画行動の促進（適応的機能）。過剰になると回避の悪循環を生む。',
     transitions: [
-      { to: 'fear', label: '対象が具体化・即時化' },
-      { to: 'frustration', label: '行動できない焦り' },
-      { to: 'relief', label: '脅威の消失' },
-      { to: 'sadness', label: '慢性化→抑うつへ' },
-      { to: 'hope', label: '可能性の認識' },
+      { to: 'fear', label: '対象が具体化・即時化', type: 'ACUTE' },
+      { to: 'frustration', label: '行動できない焦り', type: 'BLEND' },
+      { to: 'relief', label: '脅威の消失', type: 'RESOLV' },
+      { to: 'sadness', label: '慢性化→抑うつへ', type: 'CHRONIC' },
+      { to: 'hope', label: '可能性の認識', type: 'APPR' },
     ],
-    valence: -2,
-    arousal: 1,
+    valence: -2, arousal: 1, dominance: -2,
+    appraisal: { nov: 2, pleas: -2, goal: -1, cope: -2, norm: 0 },
+    temporal: { onset: 30, peak: 60, decay: 180, persist: 72 },
+    regulation: {
+      adaptive: ['腹式呼吸・漸進的筋弛緩法', '不確実性の受容（ACT）', '暴露と反応阻止'],
+      reappraisal: ['脅威の現実的確率の検討', '「最悪の場合」の具体的対処計画の策定'],
+      contraindicated: ['回避行動', '安全確認行動の過剰', '完全なコントロール追求'],
+    },
     references: ['Spielberger (1983)'],
   },
   {
@@ -656,15 +792,21 @@ export const emotions: Emotion[] = [
     ],
     function: '喪失への長期的適応。故人との「continuing bonds（持続する絆）」を維持しながら新しい生活を構築する過程。',
     transitions: [
-      { to: 'sadness', label: '急性の悲しみ' },
-      { to: 'anger', label: '運命・自分への怒り' },
-      { to: 'guilt', label: '「もっとできた」という後悔' },
-      { to: 'anxiety', label: '残された生活への不安' },
-      { to: 'contentment', label: '統合・受容' },
-      { to: 'nostalgia', label: '故人への温かい記憶' },
+      { to: 'sadness', label: '急性の悲しみ', type: 'BLEND' },
+      { to: 'anger', label: '運命・自分への怒り', type: 'BLEND' },
+      { to: 'guilt', label: '「もっとできた」という後悔', type: 'BLEND' },
+      { to: 'anxiety', label: '残された生活への不安', type: 'BLEND' },
+      { to: 'contentment', label: '統合・受容', type: 'RESOLV' },
+      { to: 'nostalgia', label: '故人への温かい記憶', type: 'APPR' },
     ],
-    valence: -2,
-    arousal: -1,
+    valence: -2, arousal: -1, dominance: -2,
+    appraisal: { nov: 0, pleas: -2, goal: -2, cope: -2, norm: 1 },
+    temporal: { onset: 120, peak: 1440, decay: 20160, persist: 8760 },
+    regulation: {
+      adaptive: ['悲嘆の言語化・語り', 'グリーフサポートグループ', '故人との象徴的つながりの維持'],
+      reappraisal: ['喪失を意味のある体験として統合する', '継続する絆の形式の変容'],
+      contraindicated: ['悲嘆の抑圧と「立ち直り」の強制', '孤立', '自己批判の反芻'],
+    },
     references: ['Bonanno (2009)', 'Stroebe & Schut (1999)'],
   },
   {
@@ -692,13 +834,19 @@ export const emotions: Emotion[] = [
     ],
     function: '期待の現実への調整。再挑戦か方向転換かの動機づけを決定する分岐点。',
     transitions: [
-      { to: 'sadness', label: '受容ルート' },
-      { to: 'anger', label: '他責ルート' },
-      { to: 'shame', label: '自責ルート' },
-      { to: 'hope', label: '再挑戦への動機' },
+      { to: 'sadness', label: '受容ルート', type: 'APPR' },
+      { to: 'anger', label: '他責ルート', type: 'APPR' },
+      { to: 'shame', label: '自責ルート', type: 'APPR' },
+      { to: 'hope', label: '再挑戦への動機', type: 'APPR' },
     ],
-    valence: -1,
-    arousal: -1,
+    valence: -1, arousal: -1, dominance: -1,
+    appraisal: { nov: -1, pleas: -1, goal: -2, cope: -1, norm: 0 },
+    temporal: { onset: 5, peak: 10, decay: 60, persist: 12 },
+    regulation: {
+      adaptive: ['期待の現実的な再設定', '失望から得た情報の活用', '他者への感情表現'],
+      reappraisal: ['失望を情報として扱う（期待のキャリブレーション）', '選択肢の再評価'],
+      contraindicated: ['「どうせ何をやってもダメ」という一般化', '関係そのものの否定'],
+    },
     references: [],
   },
   {
@@ -727,14 +875,20 @@ export const emotions: Emotion[] = [
     ],
     function: '適切に処理されれば意思決定の学習機能を果たす。反芻に陥ると慢性的抑うつへ変質。',
     transitions: [
-      { to: 'sadness', label: '喪失感' },
-      { to: 'shame', label: '自己全体への批判' },
-      { to: 'guilt', label: '行為への批判' },
-      { to: 'hope', label: '学習→改善への動機' },
-      { to: 'contentment', label: '受容・意味の発見' },
+      { to: 'sadness', label: '喪失感', type: 'BLEND' },
+      { to: 'shame', label: '自己全体への批判', type: 'APPR' },
+      { to: 'guilt', label: '行為への批判', type: 'APPR' },
+      { to: 'hope', label: '学習→改善への動機', type: 'APPR' },
+      { to: 'contentment', label: '受容・意味の発見', type: 'RESOLV' },
     ],
-    valence: -1,
-    arousal: -1,
+    valence: -1, arousal: -1, dominance: -1,
+    appraisal: { nov: 0, pleas: -1, goal: -1, cope: -1, norm: -1 },
+    temporal: { onset: 60, peak: 120, decay: 1440, persist: 720 },
+    regulation: {
+      adaptive: ['後悔から学べる教訓の明確化', 'セルフ・コンパッション', '「これからできること」への集中'],
+      reappraisal: ['後悔を自己批判でなく学習の素材として見る', '過去の自分の状況的制約の認識'],
+      contraindicated: ['反芻的な後悔の反復', '自己罰的な思考', '「タラレバ」の過度な展開'],
+    },
     references: ['Gilovich & Medvec (1995)', 'Ware (2011)'],
   },
   {
@@ -763,12 +917,18 @@ export const emotions: Emotion[] = [
     ],
     function: '①新規性・意味への動機づけ ②マインドワンダリングによる創造的洞察の孵化。退屈耐性の低さは多くの依存症・衝動性と相関。',
     transitions: [
-      { to: 'curiosity', label: 'マインドワンダリング→洞察' },
-      { to: 'frustration', label: 'イライラの増大' },
-      { to: 'contentment', label: '意味の発見・受容' },
+      { to: 'curiosity', label: 'マインドワンダリング→洞察', type: 'APPR' },
+      { to: 'frustration', label: 'イライラの増大', type: 'INTENS' },
+      { to: 'contentment', label: '意味の発見・受容', type: 'RESOLV' },
     ],
-    valence: -1,
-    arousal: -2,
+    valence: -1, arousal: -2, dominance: -1,
+    appraisal: { nov: -2, pleas: -1, goal: -1, cope: 0, norm: 0 },
+    temporal: { onset: 300, peak: 60, decay: 60, persist: 4 },
+    regulation: {
+      adaptive: ['意味のある活動への転換', '好奇心への意図的な向き直し', 'マインドワンダリングの活用'],
+      reappraisal: ['退屈を創造的思考の種床として見る', '「今ここ」への気づき'],
+      contraindicated: ['スマートフォンへの即時逃避', '過度な刺激追求', '退屈感の徹底的な排除'],
+    },
     references: ['Mann & Cadman (2014)'],
   },
   {
@@ -796,13 +956,19 @@ export const emotions: Emotion[] = [
     ],
     function: '社会的つながりの修復への動機づけ。慢性化すると喫煙15本/日に匹敵する死亡リスク上昇（ホルト＝ルンスタッド）。',
     transitions: [
-      { to: 'sadness', label: '喪失感' },
-      { to: 'anxiety', label: '孤立への恐怖' },
-      { to: 'anger', label: '他者への不満' },
-      { to: 'love', label: 'つながりの回復' },
+      { to: 'sadness', label: '喪失感', type: 'BLEND' },
+      { to: 'anxiety', label: '孤立への恐怖', type: 'BLEND' },
+      { to: 'anger', label: '他者への不満', type: 'APPR' },
+      { to: 'love', label: 'つながりの回復', type: 'RESOLV' },
     ],
-    valence: -2,
-    arousal: -1,
+    valence: -2, arousal: -1, dominance: -1,
+    appraisal: { nov: 0, pleas: -2, goal: -2, cope: -1, norm: 1 },
+    temporal: { onset: 1440, peak: 10080, decay: 10080, persist: 8760 },
+    regulation: {
+      adaptive: ['小さなつながりの積み重ね（挨拶・雑談）', '共通の関心事を持つグループへの参加', 'セルフ・コンパッション'],
+      reappraisal: ['孤独と孤立の区別', '社会的警戒の認識と修正'],
+      contraindicated: ['さらなる孤立化', 'SNSの過剰利用', '他者への不信の強化'],
+    },
     references: ['Cacioppo & Patrick (2008)', 'Holt-Lunstad et al. (2015)'],
   },
   {
@@ -831,13 +997,19 @@ export const emotions: Emotion[] = [
     ],
     function: '目標阻害への警報シグナル。問題への集中エネルギーを供給するが、暴走すると対人関係を損なう。',
     transitions: [
-      { to: 'anger', label: '対象への怒りへ' },
-      { to: 'anxiety', label: '慢性的な制御不能感' },
-      { to: 'boredom', label: '諦め・投げやり' },
-      { to: 'contentment', label: '問題解決・受容' },
+      { to: 'anger', label: '対象への怒りへ', type: 'INTENS' },
+      { to: 'anxiety', label: '慢性的な制御不能感', type: 'CHRONIC' },
+      { to: 'boredom', label: '諦め・投げやり', type: 'APPR' },
+      { to: 'contentment', label: '問題解決・受容', type: 'RESOLV' },
     ],
-    valence: -1,
-    arousal: 2,
+    valence: -1, arousal: 2, dominance: 0,
+    appraisal: { nov: 0, pleas: -1, goal: -2, cope: -1, norm: 0 },
+    temporal: { onset: 10, peak: 5, decay: 20, persist: 1 },
+    regulation: {
+      adaptive: ['目標の再分解（小さなステップへ）', '一時的な離脱と休憩', '問題の言語化'],
+      reappraisal: ['障害を挑戦として再定義', '状況の制御可能な側面への集中'],
+      contraindicated: ['衝動的な行動化', '怒りの他者への向け直し', '諦めによる完全放棄'],
+    },
     references: [],
   },
   {
@@ -865,13 +1037,19 @@ export const emotions: Emotion[] = [
     ],
     function: '自己連続性の維持。精神的健康に対して保護的に働く（セディキデスら）。孤独感・不安への解毒剤。',
     transitions: [
-      { to: 'sadness', label: '喪失感の強調' },
-      { to: 'joy', label: '温かい記憶の強調' },
-      { to: 'gratitude', label: '過去への感謝' },
-      { to: 'love', label: '関係への思い' },
+      { to: 'sadness', label: '喪失感の強調', type: 'APPR' },
+      { to: 'joy', label: '温かい記憶の強調', type: 'APPR' },
+      { to: 'gratitude', label: '過去への感謝', type: 'APPR' },
+      { to: 'love', label: '関係への思い', type: 'BLEND' },
     ],
-    valence: 0,
-    arousal: -1,
+    valence: 0, arousal: -1, dominance: 0,
+    appraisal: { nov: 0, pleas: 1, goal: 0, cope: 1, norm: 1 },
+    temporal: { onset: 10, peak: 10, decay: 60, persist: 3 },
+    regulation: {
+      adaptive: ['懐かしい記憶を人生の資源として活用', '現在との橋渡しとしての回想'],
+      reappraisal: ['過去を美化でなく資源として活用', '現在にも価値があることへの注意'],
+      contraindicated: ['過去への逃避・現実逃避としての利用', '「昔はよかった」という現在の否定'],
+    },
     references: ['Sedikides et al. (2015)'],
   },
 
@@ -902,13 +1080,19 @@ export const emotions: Emotion[] = [
     ],
     function: '配偶関係・重要な絆の保護（進化的機能）。過剰になれば関係そのものを破壊する逆説的危険性をもつ。',
     transitions: [
-      { to: 'anger', label: '確信→攻撃的行動' },
-      { to: 'anxiety', label: '不確実な疑念の持続' },
-      { to: 'sadness', label: '喪失の受け入れ' },
-      { to: 'shame', label: '嫉妬する自分への嫌悪' },
+      { to: 'anger', label: '確信→攻撃的行動', type: 'APPR' },
+      { to: 'anxiety', label: '不確実な疑念の持続', type: 'CHRONIC' },
+      { to: 'sadness', label: '喪失の受け入れ', type: 'RESOLV' },
+      { to: 'shame', label: '嫉妬する自分への嫌悪', type: 'APPR' },
     ],
-    valence: -2,
-    arousal: 1,
+    valence: -2, arousal: 1, dominance: -1,
+    appraisal: { nov: 1, pleas: -2, goal: -2, cope: -1, norm: 0 },
+    temporal: { onset: 30, peak: 30, decay: 120, persist: 24 },
+    regulation: {
+      adaptive: ['パートナーとの率直な対話', '自己の不安の根源の探索', '信頼関係の構築'],
+      reappraisal: ['嫉妬を愛着の強さのシグナルとして捉える', '確認行動の効果の批判的評価'],
+      contraindicated: ['過度な監視・確認行動', '関係の独占的コントロール', '自己開示の回避'],
+    },
     references: [],
   },
   {
@@ -937,13 +1121,19 @@ export const emotions: Emotion[] = [
     ],
     function: '（建設的羨望）自己改善への動機づけ。（悪意ある羨望）社会的不平等への反応。多くの文化で道徳的に否定され、表出が抑制される。',
     transitions: [
-      { to: 'anger', label: '悪意ある羨望→攻撃' },
-      { to: 'sadness', label: '自己の不足感' },
-      { to: 'hope', label: '建設的羨望→目標設定' },
-      { to: 'shame', label: '羨む自分への嫌悪' },
+      { to: 'anger', label: '悪意ある羨望→攻撃', type: 'APPR' },
+      { to: 'sadness', label: '自己の不足感', type: 'APPR' },
+      { to: 'hope', label: '建設的羨望→目標設定', type: 'APPR' },
+      { to: 'shame', label: '羨む自分への嫌悪', type: 'APPR' },
     ],
-    valence: -1,
-    arousal: 0,
+    valence: -1, arousal: 0, dominance: -1,
+    appraisal: { nov: 0, pleas: -1, goal: -1, cope: -1, norm: -1 },
+    temporal: { onset: 60, peak: 60, decay: 120, persist: 12 },
+    regulation: {
+      adaptive: ['羨望を目標設定のシグナルとして活用', '自己の強みと価値の再確認', '比較対象との関係再構築'],
+      reappraisal: ['他者の成功を「パイの独占」でなく「可能性の実証」として捉える', 'ゼロサムでない人生観の採用'],
+      contraindicated: ['SNS上の比較の反復', '他者の毀損・妨害', '自己嫌悪への沈潜'],
+    },
     references: ['van de Ven et al. (2009)'],
   },
   {
@@ -972,13 +1162,19 @@ export const emotions: Emotion[] = [
     ],
     function: '社会規範の内面化と維持（自己意識感情）。過剰な恥は隠蔽・孤立・抑うつ・薬物依存へのリスク。恥への耐性（shame resilience）が回復の鍵。',
     transitions: [
-      { to: 'anger', label: '他者への投影・攻撃' },
-      { to: 'sadness', label: '自己嫌悪→抑うつ' },
-      { to: 'anxiety', label: '再曝露への恐れ' },
-      { to: 'guilt', label: '自己→行為への評価転換' },
+      { to: 'anger', label: '他者への投影・攻撃', type: 'APPR' },
+      { to: 'sadness', label: '自己嫌悪→抑うつ', type: 'CHRONIC' },
+      { to: 'anxiety', label: '再曝露への恐れ', type: 'BLEND' },
+      { to: 'guilt', label: '自己→行為への評価転換', type: 'APPR' },
     ],
-    valence: -2,
-    arousal: 0,
+    valence: -2, arousal: 0, dominance: -2,
+    appraisal: { nov: 1, pleas: -2, goal: -2, cope: -2, norm: -2 },
+    temporal: { onset: 1, peak: 2, decay: 30, persist: 4 },
+    regulation: {
+      adaptive: ['恥の脆弱性の言語化（ブラウン）', 'セルフ・コンパッション', '信頼できる他者への開示'],
+      reappraisal: ['行為と存在の分離（「ダメな行為」≠「ダメな人間」）', '恥を共通人間性の一部として捉える'],
+      contraindicated: ['完全な隠蔽と孤立', '恥の反芻的反復', '恥を攻撃性に転化'],
+    },
     references: ['Tangney et al. (2003)', 'Brown (2012)'],
   },
   {
@@ -1007,13 +1203,19 @@ export const emotions: Emotion[] = [
     ],
     function: '適切に処理されれば謝罪→修復→関係強化の建設的サイクルを生む。過剰・慢性化は抑うつへ変質。',
     transitions: [
-      { to: 'sadness', label: '修復不能な場合' },
-      { to: 'shame', label: '行為→自己全体への帰属転換' },
-      { to: 'relief', label: '謝罪・修復後' },
-      { to: 'gratitude', label: '赦しを受けた後' },
+      { to: 'sadness', label: '修復不能な場合', type: 'CHRONIC' },
+      { to: 'shame', label: '行為→自己全体への帰属転換', type: 'APPR' },
+      { to: 'relief', label: '謝罪・修復後', type: 'RESOLV' },
+      { to: 'gratitude', label: '赦しを受けた後', type: 'APPR' },
     ],
-    valence: -1,
-    arousal: 0,
+    valence: -1, arousal: 0, dominance: -1,
+    appraisal: { nov: 0, pleas: -1, goal: -1, cope: 0, norm: -2 },
+    temporal: { onset: 30, peak: 60, decay: 120, persist: 48 },
+    regulation: {
+      adaptive: ['謝罪・修復行動', '再発防止の具体的計画', '赦しの探索（自己赦しを含む）'],
+      reappraisal: ['「取り返せる罪」と「取り返せない罪」の区別', '自罰の代わりに修復へのエネルギー転換'],
+      contraindicated: ['自罰的反芻', '関係の一方的な断絶', '謝罪なしの自己赦し'],
+    },
     references: ['Tangney et al. (2003)'],
   },
   {
@@ -1041,13 +1243,19 @@ export const emotions: Emotion[] = [
     ],
     function: '他者理解と向社会的行動の基盤。情動的共感→共感疲労、共感的関心→持続的向社会行動という区別が重要。',
     transitions: [
-      { to: 'sadness', label: '他者の悲しみの共有' },
-      { to: 'love', label: '深い他者理解からの絆' },
-      { to: 'elevation', label: '感動的な善行の目撃' },
-      { to: 'frustration', label: '共感疲労' },
+      { to: 'sadness', label: '他者の悲しみの共有', type: 'BLEND' },
+      { to: 'love', label: '深い他者理解からの絆', type: 'INTENS' },
+      { to: 'elevation', label: '感動的な善行の目撃', type: 'APPR' },
+      { to: 'frustration', label: '共感疲労', type: 'CHRONIC' },
     ],
-    valence: 0,
-    arousal: 0,
+    valence: 0, arousal: 0, dominance: 0,
+    appraisal: { nov: 0, pleas: 0, goal: 0, cope: 0, norm: 1 },
+    temporal: { onset: 5, peak: 5, decay: 30, persist: 2 },
+    regulation: {
+      adaptive: ['情動的共感と認知的共感のバランス調整', 'セルフ・コンパッション', '共感の境界設定'],
+      reappraisal: ['他者の苦痛を感じながら自己を保つ（ケア疲れの予防）', '共感を燃料でなく情報として使う'],
+      contraindicated: ['他者の感情の引き受けすぎ', '自己の感情の無視', '強制的な共感の表現'],
+    },
     references: ['Decety & Jackson (2004)', 'Singer & Klimecki (2014)'],
   },
   {
@@ -1076,12 +1284,18 @@ export const emotions: Emotion[] = [
     ],
     function: '「私はあなたの規範を知っており、違反を認めている」という宥和シグナル。困惑を上手く表出する人は失敗にもかかわらず好感を持たれやすい。',
     transitions: [
-      { to: 'shame', label: '自己否定が加わる' },
-      { to: 'joy', label: '笑いへの転化' },
-      { to: 'anger', label: '指摘した相手への怒り' },
+      { to: 'shame', label: '自己否定が加わる', type: 'INTENS' },
+      { to: 'joy', label: '笑いへの転化', type: 'APPR' },
+      { to: 'anger', label: '指摘した相手への怒り', type: 'APPR' },
     ],
-    valence: -1,
-    arousal: 1,
+    valence: -1, arousal: 1, dominance: -1,
+    appraisal: { nov: 1, pleas: -1, goal: -1, cope: 0, norm: -1 },
+    temporal: { onset: 0.5, peak: 1, decay: 5, persist: 0.5 },
+    regulation: {
+      adaptive: ['ユーモアによる転化', '自己開示的な謝罪（軽い）', '状況の再構成'],
+      reappraisal: ['「誰にでもある」という普遍化', '失敗の可愛らしさへの気づき'],
+      contraindicated: ['過剰な謝罪と自己批判', '事件の反復的想起', '恥への昇格的解釈'],
+    },
     references: ['Keltner (2009)'],
   },
   {
@@ -1109,11 +1323,17 @@ export const emotions: Emotion[] = [
     ],
     function: '社会的階層の維持と規範の強化。ゴットマン研究では離婚を予測する最強の単一因子。集団レベルでは非人間化・差別の心理的下地となる。',
     transitions: [
-      { to: 'disgust', label: '嫌悪との混合' },
-      { to: 'anger', label: '積極的な攻撃へ' },
+      { to: 'disgust', label: '嫌悪との混合', type: 'BLEND' },
+      { to: 'anger', label: '積極的な攻撃へ', type: 'INTENS' },
     ],
-    valence: -1,
-    arousal: 0,
+    valence: -1, arousal: 0, dominance: 2,
+    appraisal: { nov: 0, pleas: -1, goal: 0, cope: 2, norm: -2 },
+    temporal: { onset: 60, peak: 60, decay: 1440, persist: 8760 },
+    regulation: {
+      adaptive: ['怒りへの転換（相手への直接的フィードバック）', '個人と行為の分離'],
+      reappraisal: ['他者への敬意と共通の人間性の認識', '軽蔑の関係破壊コストの認識'],
+      contraindicated: ['軽蔑の慢性化と定着', '非人間化的言語・思考の維持'],
+    },
     references: ['Ekman & Friesen (1986)', 'Gottman (1999)', 'Haslam (2006)'],
   },
   {
@@ -1140,13 +1360,19 @@ export const emotions: Emotion[] = [
     ],
     function: '持続的な他者援助と自己回復の基盤。哀れみと異なり、被援助者の自尊心を損なわない。臨床家・介護者の燃え尽き予防の鍵。',
     transitions: [
-      { to: 'empathy', label: '共感との連続' },
-      { to: 'love', label: '深い思いやりからの絆' },
-      { to: 'elevation', label: '感動と重なる' },
-      { to: 'sadness', label: '無力感を感じる場合' },
+      { to: 'empathy', label: '共感との連続', type: 'BLEND' },
+      { to: 'love', label: '深い思いやりからの絆', type: 'INTENS' },
+      { to: 'elevation', label: '感動と重なる', type: 'BLEND' },
+      { to: 'sadness', label: '無力感を感じる場合', type: 'APPR' },
     ],
-    valence: 1,
-    arousal: 0,
+    valence: 1, arousal: 0, dominance: 1,
+    appraisal: { nov: 0, pleas: 1, goal: 1, cope: 1, norm: 2 },
+    temporal: { onset: 10, peak: 10, decay: 120, persist: 4 },
+    regulation: {
+      adaptive: ['セルフ・コンパッションの実践', '適切な境界設定', 'コンパッション瞑想（LKM）'],
+      reappraisal: ['共感疲労とコンパッション疲労の区別', '苦痛への応答能力を資源として認識'],
+      contraindicated: ['他者の代わりに問題を解決しようとする過剰関与', '境界のない自己犠牲'],
+    },
     references: ['Neff (2003)', 'Singer & Klimecki (2014)'],
   },
 ];
@@ -1163,6 +1389,24 @@ export const categoryLabels: Record<EmotionCategory, string> = {
   positive: 'ポジティブ感情',
   negative: 'ネガティブ感情',
   social: '社会的感情',
+};
+
+export const transitionTypeColors: Record<TransitionType, string> = {
+  ACUTE:   '#F97316', // オレンジ: 急性
+  APPR:    '#A78BFA', // 紫: 再評価
+  INTENS:  '#EF4444', // 赤: 強度増大
+  CHRONIC: '#6B7280', // グレー: 慢性化
+  RESOLV:  '#34D399', // 緑: 解消
+  BLEND:   '#60A5FA', // 青: 混合
+};
+
+export const transitionTypeLabels: Record<TransitionType, string> = {
+  ACUTE:   '急性遷移',
+  APPR:    '再評価遷移',
+  INTENS:  '強度増大',
+  CHRONIC: '慢性化',
+  RESOLV:  '解消',
+  BLEND:   '感情混合',
 };
 
 export function getEmotionById(id: string): Emotion | undefined {

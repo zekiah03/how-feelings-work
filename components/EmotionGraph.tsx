@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import type { Core, NodeSingular } from 'cytoscape';
-import { emotions, categoryColors } from '@/lib/emotions';
+import { emotions, categoryColors, transitionTypeColors } from '@/lib/emotions';
 import type { EmotionCategory } from '@/lib/emotions';
 
 interface EmotionGraphProps {
@@ -35,7 +35,7 @@ export default function EmotionGraph({
       },
     }));
 
-    const edges: { data: { id: string; source: string; target: string; label: string } }[] = [];
+    const edges: { data: { id: string; source: string; target: string; label: string; transitionType: string; edgeColor: string } }[] = [];
     visibleEmotions.forEach((e) => {
       e.transitions.forEach((t, i) => {
         if (visibleIds.has(t.to)) {
@@ -45,6 +45,8 @@ export default function EmotionGraph({
               source: e.id,
               target: t.to,
               label: t.label,
+              transitionType: t.type,
+              edgeColor: transitionTypeColors[t.type],
             },
           });
         }
@@ -117,19 +119,20 @@ export default function EmotionGraph({
             selector: 'edge',
             style: {
               width: 1.5,
-              'line-color': 'rgba(255,255,255,0.2)',
-              'target-arrow-color': 'rgba(255,255,255,0.2)',
+              'line-color': 'data(edgeColor)',
+              'target-arrow-color': 'data(edgeColor)',
               'target-arrow-shape': 'triangle',
               'curve-style': 'bezier',
               label: 'data(label)',
               'font-size': '8px',
-              color: 'rgba(255,255,255,0.4)',
+              color: 'rgba(255,255,255,0.5)',
               'font-family': '"Noto Sans JP", sans-serif',
               'text-rotation': 'autorotate',
               'text-background-color': '#0f172a',
               'text-background-opacity': 0.7,
               'text-background-padding': '2px',
-              'transition-property': 'line-color, target-arrow-color, opacity',
+              opacity: 0.45,
+              'transition-property': 'opacity',
               'transition-duration': 150,
             },
           },
@@ -137,8 +140,7 @@ export default function EmotionGraph({
             selector: 'edge.highlighted',
             style: {
               width: 2.5,
-              'line-color': 'rgba(255,255,255,0.7)',
-              'target-arrow-color': 'rgba(255,255,255,0.7)',
+              opacity: 1,
               color: 'rgba(255,255,255,0.9)',
               'z-index': 10,
             },
@@ -146,7 +148,7 @@ export default function EmotionGraph({
           {
             selector: 'edge.dimmed',
             style: {
-              opacity: 0.08,
+              opacity: 0.05,
             },
           },
         ],

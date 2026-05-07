@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import EmotionDetail from '@/components/EmotionDetail';
-import { categoryColors, categoryLabels, emotions } from '@/lib/emotions';
-import type { EmotionCategory } from '@/lib/emotions';
+import { categoryColors, categoryLabels, transitionTypeColors, transitionTypeLabels, emotions } from '@/lib/emotions';
+import type { EmotionCategory, TransitionType } from '@/lib/emotions';
 
 const EmotionGraph = dynamic(() => import('@/components/EmotionGraph'), {
   ssr: false,
@@ -52,16 +52,27 @@ export default function Home() {
               状態遷移ネットワーク ── 場面・プロセス・フロンティア
             </p>
           </div>
-          <div className="hidden md:flex items-center gap-4">
-            {(Object.entries(categoryLabels) as [EmotionCategory, string][]).map(([cat, label]) => (
-              <div key={cat} className="flex items-center gap-1.5">
-                <div
-                  className="w-2.5 h-2.5 rounded-full"
-                  style={{ backgroundColor: categoryColors[cat] }}
-                />
-                <span className="text-xs text-slate-400">{label}</span>
-              </div>
-            ))}
+          <div className="hidden md:flex items-center gap-5">
+            <div className="flex items-center gap-3">
+              {(Object.entries(categoryLabels) as [EmotionCategory, string][]).map(([cat, label]) => (
+                <div key={cat} className="flex items-center gap-1.5">
+                  <div
+                    className="w-2.5 h-2.5 rounded-full"
+                    style={{ backgroundColor: categoryColors[cat] }}
+                  />
+                  <span className="text-xs text-slate-400">{label}</span>
+                </div>
+              ))}
+            </div>
+            <div className="w-px h-4 bg-slate-700" />
+            <div className="flex items-center gap-2.5">
+              {(Object.entries(transitionTypeColors) as [TransitionType, string][]).map(([type, color]) => (
+                <div key={type} className="flex items-center gap-1">
+                  <div className="w-5 h-0.5 rounded-full" style={{ backgroundColor: color }} />
+                  <span className="text-xs text-slate-500">{transitionTypeLabels[type]}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
 
