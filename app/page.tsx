@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import EmotionDetail from '@/components/EmotionDetail';
 import { categoryColors, categoryLabels, emotions } from '@/lib/emotions';
 import type { EmotionCategory } from '@/lib/emotions';
+import { contributeToTwin } from '@/lib/contribute';
 
 const EmotionGraph = dynamic(() => import('@/components/EmotionGraph'), {
   ssr: false,
@@ -26,9 +27,25 @@ const categories: { value: EmotionCategory | 'all'; label: string }[] = [
 export default function Home() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filterCategory, setFilterCategory] = useState<EmotionCategory | 'all'>('all');
+  const [exploredIds, setExploredIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (sessionStorage.getItem('hfw_contributed')) return;
+    sessionStorage.setItem('hfw_contributed', '1');
+    contributeToTwin('how-feelings-work', { explored: true, totalEmotions: emotions.length });
+  }, []);
 
   const handleSelect = (id: string) => {
     setSelectedId(id || null);
+    if (id && !exploredIds.includes(id)) {
+      setExploredIds((prev) => {
+        const next = [...prev, id];
+        if (next.length % 5 === 0) {
+          contributeToTwin('how-feelings-work', { exploredEmotions: next });
+        }
+        return next;
+      });
+    }
   };
 
   const counts = {
