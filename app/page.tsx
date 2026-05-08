@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import EmotionDetail from '@/components/EmotionDetail';
 import { categoryColors, categoryLabels, transitionTypeColors, transitionTypeLabels, emotions } from '@/lib/emotions';
 import type { EmotionCategory, TransitionType } from '@/lib/emotions';
+import { contributeToTwin } from '@/lib/contribute';
 
 const EmotionGraph = dynamic(() => import('@/components/EmotionGraph'), {
   ssr: false,
@@ -26,6 +27,12 @@ const categories: { value: EmotionCategory | 'all'; label: string }[] = [
 export default function Home() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filterCategory, setFilterCategory] = useState<EmotionCategory | 'all'>('all');
+
+  useEffect(() => {
+    if (sessionStorage.getItem('hfw_contributed')) return;
+    sessionStorage.setItem('hfw_contributed', '1');
+    contributeToTwin('how-feelings-work', { event: 'view', emotionCount: emotions.length });
+  }, []);
 
   const handleSelect = (id: string) => {
     setSelectedId(id || null);
